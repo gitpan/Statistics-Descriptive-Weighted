@@ -1,0 +1,51 @@
+This partially extends Statistics::Descriptive to handle weighted
+variates.
+
+Although some functionality of Statistics::Descriptive has been lost
+other functionality has been added, in particular a cdf function and
+other related functions. (see man page for details).
+
+The implementation uses Tree::Treap which, since it is not on CPAN, is
+provided and automatically installed with this package. This is an
+implementation of a randomized self-balancing binary search tree called a
+treap.
+
+To install this package:
+
+perl Makefile.pl
+make
+make test
+(sudo) make install
+man Statistics::Descriptive::Weighted
+
+List of methods by class:
+
+Statistics::Descriptive::Weighted::Sparse
+----------------------------------
+add_data
+count
+mean
+weight
+sum
+variance
+min
+max
+standard_deviation
+sample_range
+
+Statistics::Descriptive::Weighted::Full
+----------------------------------
+All methods above and:
+
+get_data
+percentile
+median
+mode
+maxweight
+cdf
+survival
+rtp
+quantile
+print
+
+
