@@ -1,5 +1,5 @@
 package Statistics::Descriptive::Weighted;
-$VERSION = '0.2';
+$VERSION = '0.3';
 use Statistics::Descriptive;
 use Data::Dumper;
 
@@ -129,7 +129,7 @@ sub new {
   $self->{maxweight}      = 0;
   $self->{quantile}       = new Tree::Treap("num");
   $self->{percentile}     = new Tree::Treap("num");
-  $self->{order}          = 1;
+  $self->{order}          = 1; 
   $self->{'_reserved'} = \%fields;
   bless ($self, $class);  
   return $self;
@@ -436,22 +436,31 @@ Statistics::Descriptive::Weighted - Module of basic descriptive statistical func
 =head1 SYNOPSIS
 
   use Statistics::Descriptive::Weighted;
+
   $stat  = Statistics::Descriptive::Weighted::Full->new();
+  
   $stat->add_data([1,2,3,4],[0.1,1,10,100]); ## weights are in second argument
   $mean  = $stat->mean();                    ## weighted mean
   $var   = $stat->variance();                ## weighted sample variance
-  $med   = $stat->median();                  ## weighted sample median
+  
   $stat->add_data([3],[10]);                 ## statistics are updated as variates are added
-  $vwt   = $stat->weight(3);                 ## returns 20
-  $wt    = $stat->weight();                  ## returns sum of weights 121.1
-  $mode  = $stat->mode();                    ## returns 4, value with most weight
+  $vwt   = $stat->weight(3);                 ## returns 20, the weight of 3
+  $wt    = $stat->weight();                  ## returns sum of weights, 121.1
+  $ct    = $stat->count(3);                  ## returns 2, the number of times 3 was observed
+  $ct    = $stat->count();                   ## returns 5, the total number of observations
+
+  $med   = $stat->median();                  ## weighted sample median
+  $mode  = $stat->mode();                    ## returns 4, value with the most weight
   $ptl   = $stat->quantile(.01);             ## returns 3, smallest value with cdf >= 1st %ile 
-  $ptl   = $stat->percentile(1);             ## returns 3, smallest value with cdf >= 1st %ile 
+  $ptl   = $stat->percentile(1);             ## returns about 2.09, obtained by interpolation
   $cdf   = $stat->cdf(3);                    ## returns ECDF of 3   (about 17.4%)
-  $cdf   = $stat->cdf(3.5);                  ## returns ECDF of 3.5 (about 17.4%, same as $stat->cdf(3))
+  $cdf   = $stat->cdf(3.5);                  ## returns ECDF of 3.5 (about 17.4%, same as ECDF of 3)
   $sf    = $stat->survival(3);               ## returns complement of ECDF(3)   (about 82.6%)     
   $p-val = $stat->rtp(4);                    ## returns right tail probability of 4 (100 / 121.1) 
-  
+
+  $min  = $stat->min();                      ## returns 1, the minimum
+  $max  = $stat->max();                      ## returns 4, the maximum
+
   $unweighted  = Statistics::Descriptive::Full->new();
   $weighted    = Statistics::Descriptive::Weighted::Full->new();
 
@@ -478,18 +487,17 @@ Statistics::Descriptive::Weighted - Module of basic descriptive statistical func
 
 =head1 DESCRIPTION
 
-This module partially extends the module Statistics::Descriptive to
-handle weighted variates. Like that module, this module has an
-object-oriented design and supports two different types of data
-storage and calculation objects: sparse and full. With the sparse
-object representation, none of the data is stored and only a few
-statistical measures are available. Using the full object
-representation, much more information about the dataset
-(notwithstanding order of observation) is retained and additional
-functions are available.
+This module partially extends the module Statistics::Descriptive to handle
+weighted variates. Like that module, this module has an object-oriented
+design and supports two different types of data storage and calculation
+objects: sparse and full. With the sparse object representation, none of
+the data is stored and only a few statistical measures are available. Using
+the full object representation, complete information about the dataset
+(including order of observation) is retained and additional functions are
+available.
 
-This module represents numbers in the same way perl does on your
-architecture, relying on perl's own warnings and assertions regarding
+This module represents numbers in the same way Perl does on your
+architecture, relying on Perl's own warnings and assertions regarding
 underflow and overflow errors, division by zero, etc.  The constant
 C<$Statistics::Descriptive::Tolerance> is not used. Caveat programmor.
 
@@ -530,11 +538,11 @@ will cause programs to die with a stack backtrace.
 With this module you can recover the data sorted from get_data(). Data
 is sorted automatically on insertion. 
 
-The main extension and focus of this module was to implement a
-cumulative distribution function and a right-tail probability function
-with efficient search performance, even if the data added is already
-sorted. This is achieved using a partially randomized self-balancing
-tree to store data. 
+The main extension and focus of this module was to implement a cumulative
+distribution function and a right-tail probability function with efficient
+search performance, even if the data added is already sorted. This is
+achieved using a partially randomized self-balancing tree to store data.
+The implementation uses Tree::Treap v. 0.02 written by Andrew Johnson.
 
 =head1 METHODS
 
@@ -885,7 +893,7 @@ track it down.
 
 David H. Ardell
 
-My email address can be found on the web. Google me.
+dhard@cpan.org (or Google works).
 
 =head1 REFERENCES
 
@@ -911,6 +919,10 @@ Updating Mean and Variance Estimates: An Improved Method.
 =item * 
 
 L<http://en.wikipedia.org/wiki/Treap>
+
+=item * 
+
+Tree::Treap Copyright 2002-2005 Andrew Johnson. L<http://stuff.siaris.net>
 
 =back
 

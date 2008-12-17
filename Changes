@@ -1,5 +1,10 @@
 Revision history for Perl extension Statistics::Descriptive::Weighted.
 
+0.30 Dec 2008 
+     - Fixed an error in the SYNOPSIS regarding percentile. Added
+more attribution to Andrew Johnson for Tree::Treap. Added contact
+information. Fixed errors in Description. 
+
 0.20 December 2008
      - Ported to Module::Install to fix Tree::Treap.pm provided dependency
 testing bug

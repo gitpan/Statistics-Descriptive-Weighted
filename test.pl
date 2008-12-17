@@ -1,4 +1,4 @@
-use Test::Simple tests => 73;
+use Test::Simple tests => 74;
 use Statistics::Descriptive::Weighted;
 
 $Tolerance = 1e-10;
@@ -89,6 +89,7 @@ ok( $full->mode() == 1, 'Full dataset 1 mode');
 
 $full = Statistics::Descriptive::Weighted::Full->new();
 $full->add_data([-2, 7, 4, 18, -5],[1,2,1,1,1]);
+ok( $full->sum() == 29, 'Full dataset 2 - sum');
 ok( $full->quantile(0.25) == -2, 'Full dataset 2 - 0.25 quantile');
 ok( $full->quantile(0.50) == 4, 'Full dataset 2 - 0.50 quantile');
 ok( $full->median == $full->percentile(50), 'Full dataset 2 - 50% percentile equals median');
@@ -139,3 +140,5 @@ ok($full->median() == 4, "Full dataset 5 - median is based on linear interpolati
 ## min, max, sample_range
 ## add range alias to sample_range
 ## confess on disqualified inherited functions
+
+
