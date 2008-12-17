@@ -1,5 +1,5 @@
 package Statistics::Descriptive::Weighted;
-$VERSION = '0.1';
+$VERSION = '0.2';
 use Statistics::Descriptive;
 use Data::Dumper;
 
@@ -916,22 +916,24 @@ L<http://en.wikipedia.org/wiki/Treap>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 David H. Ardell. All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+Copyright (c) 2008 David H. Ardell. This program is free software; you can
+redistribute it and/or modify it under the same terms as Perl itself.
 
 Portions of this code is from Statistics::Descriptive which is under
 the following copyrights.
 
-Copyright (c) 1997,1998 Colin Kuskie. All rights reserved.  This
+Copyright (c) 1997,1998 Colin Kuskie. All rights 
+reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-Copyright (c) 1998 Andrea Spinelli. All rights reserved.  This program
+Copyright (c) 1998 Andrea Spinelli. All rights 
+reserved.  This program
 is free software; you can redistribute it and/or modify it under the
 same terms as Perl itself.
 
-Copyright (c) 1994,1995 Jason Kastner. All rights reserved.  This
+Copyright (c) 1994,1995 Jason Kastner. All rights 
+reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 

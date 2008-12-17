@@ -1,5 +1,5 @@
 use Test::Simple tests => 73;
-use Weighted;
+use Statistics::Descriptive::Weighted;
 
 $Tolerance = 1e-10;
 
