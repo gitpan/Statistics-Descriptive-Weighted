@@ -1,5 +1,11 @@
 Revision history for Perl extension Statistics::Descriptive::Weighted.
 
+0.40 Feb 2009 
+
+     - Redefinition of variance() and standard_deviation() (to
+standard definitions of the unbiased estimators of those quantities,
+and addition of biased_variance() and biased_standard_deviation().
+
 0.30 Dec 2008 
      - Fixed an error in the SYNOPSIS regarding percentile. Added
 more attribution to Andrew Johnson for Tree::Treap. Added contact

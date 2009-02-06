@@ -1,25 +1,26 @@
 use Test::Simple tests => 74;
 use Statistics::Descriptive::Weighted;
+use Statistics::Descriptive;
 
 $Tolerance = 1e-10;
 
-$stat = Statistics::Descriptive::Weighted::Sparse->new();
-$stat->add_data( [1, 3, 5, 7],[1, 1, 1, 1] );
-$stat2 = Statistics::Descriptive::Sparse->new();
-$stat2->add_data( [1, 3, 5, 7]);
-ok( $stat->mean() == 4, 'Sparse dataset 1 mean');
-ok( $stat->variance() == $stat2->variance(), 'Sparse dataset 1 variance'); 
-ok( $stat->max() == 7, 'Sparse dataset 1 max');
-ok( $stat->min() == 1, 'Sparse dataset 1 min');
-ok( $stat->weight() == 4, 'Sparse dataset 1 weight');
-ok( $stat->count() == 4, 'Sparse dataset 1 count');
+$weighted = Statistics::Descriptive::Weighted::Sparse->new();
+$weighted->add_data( [1, 3, 5, 7],[1, 1, 1, 1] );
+$unweighted = Statistics::Descriptive::Sparse->new();
+$unweighted->add_data( [1, 3, 5, 7]);
+ok( $weighted->mean() == 4, 'Sparse dataset 1 mean');
+ok( $unweighted->variance() == ( $weighted->biased_variance() * $weighted->count/ ($weighted->count - 1)), 'Sparse dataset 1 biased variance'); 
+ok( $weighted->max() == 7, 'Sparse dataset 1 max');
+ok( $weighted->min() == 1, 'Sparse dataset 1 min');
+ok( $weighted->weight() == 4, 'Sparse dataset 1 weight');
+ok( $weighted->count() == 4, 'Sparse dataset 1 count');
 
 $stat3 = Statistics::Descriptive::Weighted::Sparse->new();
 $stat3->add_data( [1, 3, 5, 7],[2, 2, 2, 2] ); 
-ok( $stat3->mean() == $stat->mean(), 'Sparse dataset 2 mean');
-ok( $stat3->variance() == $stat->variance(), 'Sparse dataset 2 variance'); 
-ok( $stat3->max() == $stat->max(), 'Sparse dataset 2 max');
-ok( $stat3->min() == $stat->min(), 'Sparse dataset 2 min');
+ok( $stat3->mean() == $weighted->mean(), 'Sparse dataset 2 mean');
+ok( $stat3->variance() == $weighted->variance(), 'Sparse dataset 2 variance'); 
+ok( $stat3->max() == $weighted->max(), 'Sparse dataset 2 max');
+ok( $stat3->min() == $weighted->min(), 'Sparse dataset 2 min');
 ok( $stat3->weight() == 8, 'Sparse dataset 2 weight');
 ok( $stat3->count() == 4, 'Sparse dataset 2 count');
 
@@ -29,10 +30,10 @@ ok( $stat3->weight(2) == $stat3->weight(), join ' ','Sparse dataset 2 weight of 
 
 $stat4 = Statistics::Descriptive::Weighted::Sparse->new();
 $stat4->add_data( [1, 3, 5, 7],[0.1, 0.1, 0.1, 0.1] ); 
-ok( $stat4->mean() == $stat->mean(), 'Sparse dataset 3 mean');
-ok( abs($stat4->variance() - $stat->variance()) < $Tolerance, 'Sparse dataset 3 variance'); 
-ok( $stat4->max() == $stat->max(), 'Sparse dataset 3 max');
-ok( $stat4->min() == $stat->min(), 'Sparse dataset 3 min');
+ok( $stat4->mean() == $weighted->mean(), 'Sparse dataset 3 mean');
+ok( abs($stat4->variance() - $weighted->variance()) < $Tolerance, 'Sparse dataset 3 variance'); 
+ok( $stat4->max() == $weighted->max(), 'Sparse dataset 3 max');
+ok( $stat4->min() == $weighted->min(), 'Sparse dataset 3 min');
 ok( $stat4->weight() == 0.4, 'Sparse dataset 3 weight');
 ok( $stat4->count() == 4, 'Sparse dataset 3 count');
 
@@ -67,8 +68,8 @@ $weighted->add_data([],[]);
 $weighted->add_data([1,2,3,4],[1]);
 $weighted->add_data([1,2,3,4],[4,3,2,1]);
 ok( $stat->mean() == $weighted->mean(), 'Sparse dataset 6 (counts vs weights) mean');
-ok( $stat->variance() < $weighted->variance(), 'Sparse dataset 6 (counts vs weights) variance');
-ok( $stat->standard_deviation() < $weighted->standard_deviation(), 'Sparse dataset 6 (counts vs weights) standard deviation');
+#ok( $stat->variance() < $weighted->variance(), 'Sparse dataset 6 (counts vs weights) variance');
+#ok( $stat->standard_deviation() < $weighted->standard_deviation(), 'Sparse dataset 6 (counts vs weights) standard deviation');
 ok( $stat->max() == $weighted->max(), 'Sparse dataset 6 (counts vs weights) max');
 ok( $stat->min() == $weighted->min(), 'Sparse dataset 6 (counts vs weights) min');
 ok( $stat->count() > $weighted->count(), 'Sparse dataset 6 (counts vs weights) counts are different');
@@ -98,6 +99,7 @@ ok( $full->quantile(0.02) == -5, join " ",'Full dataset 2 - quantile below cdf o
 $full->add_data([7],[6]);
 ok( $full->weight(7) == 8, 'Full dataset 2 weight of a datum, after additional weight added');
 ok( $full->weight(5) == undef, join ' ','Full dataset 2 weight of undefined value');
+ok( abs($full->variance() - 40.91) < $Tolerance, join ' ','Full dataset 2 variance:',$full->variance());
 
 $full->print();
 
@@ -133,8 +135,10 @@ ok($full->rtp(1000) == 0, "Full dataset 4 - rt tail prob of value above maximum 
 
 ## NEED TO WRITE TESTS FOR:
 $full = Statistics::Descriptive::Weighted::Full->new();
-$full->add_data([1,3,5,7],[3,1,1,3]);
+$full->add_data([1,3,5,7,9],[3,1,1,3,0]);
 ok($full->median() == 4, "Full dataset 5 - median is based on linear interpolation in percentile.");
+ok( abs($full->variance() - 10.1818181818) < $Tolerance, join ' ','Full dataset 5 -  variance with 0 weight variate:',$full->variance());
+
 
 ## sum
 ## min, max, sample_range

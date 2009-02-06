@@ -1,5 +1,5 @@
 package Statistics::Descriptive::Weighted;
-$VERSION = '0.3';
+$VERSION = '0.4';
 use Statistics::Descriptive;
 use Data::Dumper;
 
@@ -14,8 +14,11 @@ use Carp qw(cluck confess);
 ##Define a new field to be used as method, to
 ##augment the ones inherited
 %fields = (
-  weight	      	=> 0,
-  sum_squares           => 0,
+	   weight	      	=> 0,
+	   sum_squares           => 0,
+	   weight_homozyg        => 0,	   
+	   biased_variance       => 0,
+	   biased_standard_deviation           => 0,
   );
 
 ##Have to override the base method to add new fields to the object
@@ -47,6 +50,15 @@ sub add_data {
   ##Calculate new mean, pseudo-variance, min and max;
   ##The on-line weighted incremental algorithm for variance is based on West 1979 from Wikipedia
   ##D. H. D. West (1979). Communications of the ACM, 22, 9, 532-535: Updating Mean and Variance Estimates: An Improved Method
+  
+  ## NEW in Version 0.4:
+  ## I calculate a sample weighted variance based on normalized weights rather than the sample size 
+  ## correction factor is: 1 / (1 - sum [w_i / (sum w_i) ]^2)
+
+  ## call H = sum [w_i / (sum w_i) ]^2. An online update eq for H is  H_new =  (sum.w_old^2 * H_old) + weight^2) / sum.w^2
+  
+  ## correction factor is then 1 / (1 - H_new)
+
   my $weighterror;
   for (0..$#$datum ) {
     if ($$weight[$_] <= 0) {
@@ -56,6 +68,7 @@ sub add_data {
     $oldmean = $self->{mean};
     $oldweight = $self->{weight};
     $self->{weight} += $$weight[$_];
+    $self->{weight_homozyg} = ((($oldweight ** 2 * $self->{weight_homozyg}) + $$weight[$_] ** 2) / ( $self->{weight} ** 2 ));
     $self->{count}++;
     $self->{sum} += ($$weight[$_] * $$datum[$_]);
     $self->{mean} += (($$weight[$_] / $self->{weight} ) * ($$datum[$_] - $oldmean)); 
@@ -70,8 +83,10 @@ sub add_data {
   cluck "One or more data with nonpositive weights were skipped.\n" if ($weighterror);
   $self->{sample_range} = $self->{max} - $self->{min};
   if ($self->{count} > 1) {
-    $self->{variance}     = ($self->{sum_squares} * $self->{count}) / (($self->{count} - 1) * $self->{weight});
+    $self->{variance}     = ($self->{sum_squares} / ((1 - $self->{weight_homozyg}) * $self->{weight}));
     $self->{standard_deviation}  = sqrt( $self->{variance});
+    $self->{biased_variance}     = ($self->{sum_squares} / $self->{weight});
+    $self->{biased_standard_deviation}  = sqrt( $self->{biased_variance});
   }
   return 1;
 }
@@ -431,7 +446,8 @@ __END__
 
 =head1 NAME
 
-Statistics::Descriptive::Weighted - Module of basic descriptive statistical functions for weighted variates.
+Statistics::Descriptive::Weighted - Module of basic descriptive 
+statistical functions for weighted variates.
 
 =head1 SYNOPSIS
 
@@ -441,7 +457,8 @@ Statistics::Descriptive::Weighted - Module of basic descriptive statistical func
   
   $stat->add_data([1,2,3,4],[0.1,1,10,100]); ## weights are in second argument
   $mean  = $stat->mean();                    ## weighted mean
-  $var   = $stat->variance();                ## weighted sample variance
+  $var   = $stat->variance();                ## weighted sample variance (unbiased estimator)
+  $var   = $stat->biased_variance();         ## weighted sample variance (biased)
   
   $stat->add_data([3],[10]);                 ## statistics are updated as variates are added
   $vwt   = $stat->weight(3);                 ## returns 20, the weight of 3
@@ -474,7 +491,9 @@ Statistics::Descriptive::Weighted - Module of basic descriptive statistical func
          ( abs($unweighted->variance() - $weighted->variance()) < 1e-12 );
  
   ## the above statement will print, the variances are truly unequal
-  ## both variances correct for sample-size based on their variate counts  
+  ## the unweighted variance is corrected in terms of sample-size,
+  ## while the weighted variance is corrected in terms of the sum of
+  ## squared weights
 
   $data = $weighted->get_data();     
 
@@ -500,6 +519,18 @@ This module represents numbers in the same way Perl does on your
 architecture, relying on Perl's own warnings and assertions regarding
 underflow and overflow errors, division by zero, etc.  The constant
 C<$Statistics::Descriptive::Tolerance> is not used. Caveat programmor.
+
+Variance calculations, however, are designed to avoid numerical
+problems. "Online" (running sums) approaches are used to avoid
+catastrophic cancellation and other problems. New in versions 0.4 and
+up, I have corrected the definition of the "variance" and
+"standard_deviation" functions to standard definitions. This module
+now models the same calculation as eg the "corpcor" package in R for
+weighted sample variance. Following convention from
+Statistics::Descriptive, "variance" and "standard_deviation" return
+B<unbiased> "sample" estimators. Also new in v0.4, I now provide
+"biased_variance" and "biased_standard_deviation" functions to return
+the biased estimators. Please see below for full definitions.
 
 Like in Statistics::Descriptive any of the methods (both Sparse and
 Full) cache values so that subsequent calls with the same arguments
@@ -588,17 +619,46 @@ data divided by the sum of weights.
 
 =item $stat->variance();
 
-Returns the weighted variance of the data. The "on-line" weighted
-incremental algorithm for variance is based on D. H. D. West
-(1979). Communications of the ACM, 22, 9, 532-535: Updating Mean and
-Variance Estimates: An Improved Method. Division by n-1 is used, where
-"n" refers to the count, or number of variates added. See B<SYNOPSIS>
-above.
+Returns the unbiased weighted sample variance of the data. An
+"on-line" weighted incremental algorithm for variance is based on
+D. H. D. West (1979). Communications of the ACM, 22, 9, 532-535:
+Updating Mean and Variance Estimates: An Improved Method. However,
+instead of dividing by (n-1) as in that paper, the bias correction
+used is:
+
+=over
+
+1 / (1 - (sum_i ((w_i)^2) / (sum_i w_i)^2)),
+
+=back
+
+where w_i is the ith weight. This bias correction factor multiplies
+the biased estimator of the variance defined below.
 
 =item $stat->standard_deviation();
 
-Returns the weighted standard deviation of the data. Division by n-1
-is used.
+Returns the square root of the unbiased weighted sample variance of the data.
+
+=item $stat->biased_variance();
+
+Returns the biased weighted sample variance of the data. The same
+"on-line" weighted incremental algorithm for variance is used. The
+definition of the biased weighted variance estimator is:
+
+=over
+
+sum_i (w_i * (x_i - mean_x)^2) / sum_i (w_i),
+
+=back
+
+where w_i is the weight of the ith variate x_i, and mean_x is the
+weighted mean of the variates. To reproduce the variance calculation
+of earlier versions of this module, multiple the biased variance by
+($stat->count() / ($stat->count() - 1)).
+
+=item $stat->biased_standard_deviation();
+
+Returns the square root of the unbiased weighted sample variance of the data.
 
 =item $stat->min();
 
@@ -889,11 +949,41 @@ track it down.
 
 =back
 
+=head1 NOTES
+
+I use a running sum approach for the bias correction factor. We may
+write this factor as (1 / (1 - H)), 
+
+where 
+
+=over
+
+H is 1 / (1 - (sum_i ((w_i)^2) / (sum_i w_i)^2)). 
+
+=back
+
+The calculation I use for calculation of the (n+1)th value of H, on
+encountering the (n+1)th variate is:
+
+=over
+
+H_(n+1) =  (sum_i^n w_i)^2 * H_n + w_(n+1)^2) / (sum_i^(n+1) w_i)^2
+
+=back
+
+together with initial value:
+
+=over
+
+H_0 = 0.
+
+=back
+
 =head1 AUTHOR
 
 David H. Ardell
 
-dhard@cpan.org (or Google works).
+dhard@cpan.org (or just ask Google).
 
 =head1 REFERENCES
 
@@ -905,11 +995,15 @@ RFC2330, Framework for IP Performance Metrics
 
 =item * 
 
-L<http://www.wikipedia.org/wiki/Percentile>
+L<http://en.wikipedia.org/wiki/Percentile>
 
 =item * 
 
 L<http://en.wikipedia.org/wiki/Weighted_mean>
+
+=item * 
+
+L<http://en.wikipedia.org/wiki/Weighted_variance>
 
 =item * 
 
@@ -931,7 +1025,7 @@ Tree::Treap Copyright 2002-2005 Andrew Johnson. L<http://stuff.siaris.net>
 Copyright (c) 2008 David H. Ardell. This program is free software; you can
 redistribute it and/or modify it under the same terms as Perl itself.
 
-Portions of this code is from Statistics::Descriptive which is under
+Portions of this code are from Statistics::Descriptive which is under
 the following copyrights.
 
 Copyright (c) 1997,1998 Colin Kuskie. All rights 
@@ -949,11 +1043,23 @@ reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-This library is free software; you can redistribute it and/or modify it under the same terms as Perl itself, either Perl version 5.8.8 or, at your option, any later version of Perl 5 you may have available.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.8.8 or,
+at your option, any later version of Perl 5 you may have available.
 
 =head1 REVISION HISTORY
 
 =over
+
+=item v.0.4
+
+January 2009. Redefinition of variance and standard_deviation to
+standard definitions; introduction of biased_variance,
+biased_standard_deviation functions
+
+=item v.0.2-v.0.3
+
+December 2008. Corrections made to installation package.
 
 =item v.0.1
 

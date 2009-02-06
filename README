@@ -28,7 +28,7 @@ man Statistics::Descriptive::Weighted
 
 David H. Ardell
 UC Merced
-December, 2008
+February, 2009
 
 
 Lists of methods:
@@ -45,6 +45,8 @@ min
 max
 standard_deviation
 sample_range
+biased_variance
+biased_standard_deviation
 
 Statistics::Descriptive::Weighted::Full
 ----------------------------------
