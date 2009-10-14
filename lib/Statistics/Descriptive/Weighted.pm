@@ -1,5 +1,5 @@
 package Statistics::Descriptive::Weighted;
-$VERSION = '0.4';
+$VERSION = '0.5';
 use Statistics::Descriptive;
 use Data::Dumper;
 
@@ -14,12 +14,15 @@ use Carp qw(cluck confess);
 ##Define a new field to be used as method, to
 ##augment the ones inherited
 %fields = (
-	   weight	      	=> 0,
-	   sum_squares           => 0,
-	   weight_homozyg        => 0,	   
-	   biased_variance       => 0,
-	   biased_standard_deviation           => 0,
+	   weight                    => 0,
+	   sum_squares               => 0,
+	   weight_homozyg            => 0,
+	   biased_variance           => 0,
+	   biased_standard_deviation => 0,
   );
+
+__PACKAGE__->_make_accessors( [ grep { $_ ne "weight" } keys(%fields) ] );
+__PACKAGE__->_make_private_accessors(["weight"]);
 
 ##Have to override the base method to add new fields to the object
 ##The proxy method from base class is still valid
@@ -39,9 +42,9 @@ sub add_data {
   my $oldweight;
   my ($min,$max);
   my $aref;
-  
-  unless ((@_ == 2 and ref $_[0] eq 'ARRAY' and ref $_[1] eq 'ARRAY' and @{ $_[0] } == @{ $_[1] })) { 
-    cluck "Expected input are two references to two arrays of equal length; first data, then positive weights.\n";
+
+  if ( (not ref $_[0] eq 'ARRAY') || (exists $_[1] and (not (ref $_[1] eq 'ARRAY') || @{$_[0]} != @{$_[1]} ) ) ) {
+    cluck "WARNING: Expected input are two references to two arrays of equal length; first data, then positive weights. Second array is optional.\n";
     return undef;
   }
 
@@ -50,17 +53,20 @@ sub add_data {
   ##Calculate new mean, pseudo-variance, min and max;
   ##The on-line weighted incremental algorithm for variance is based on West 1979 from Wikipedia
   ##D. H. D. West (1979). Communications of the ACM, 22, 9, 532-535: Updating Mean and Variance Estimates: An Improved Method
-  
+
   ## NEW in Version 0.4:
   ## I calculate a sample weighted variance based on normalized weights rather than the sample size 
   ## correction factor is: 1 / (1 - sum [w_i / (sum w_i) ]^2)
 
   ## call H = sum [w_i / (sum w_i) ]^2. An online update eq for H is  H_new =  (sum.w_old^2 * H_old) + weight^2) / sum.w^2
-  
+
   ## correction factor is then 1 / (1 - H_new)
 
   my $weighterror;
   for (0..$#$datum ) {
+    if (not defined $$weight[$_]) {
+      $$weight[$_] = 1;
+    }
     if ($$weight[$_] <= 0) {
       $weighterror = 1;
       next;
@@ -80,7 +86,7 @@ sub add_data {
       $self->{min} = $$datum[$_];
     }
   }
-  cluck "One or more data with nonpositive weights were skipped.\n" if ($weighterror);
+  cluck "WARNING: One or more data with nonpositive weights were skipped.\n" if ($weighterror);
   $self->{sample_range} = $self->{max} - $self->{min};
   if ($self->{count} > 1) {
     $self->{variance}     = ($self->{sum_squares} / ((1 - $self->{weight_homozyg}) * $self->{weight}));
@@ -94,19 +100,19 @@ sub add_data {
 sub weight {
   my $self = shift;
   if (@_ > 0) { 
-    cluck "Sparse statistics object expects zero arguments to weight function, returns sum of weights.";
+    cluck "WARNING: Sparse statistics object expects zero arguments to weight function, returns sum of weights.";
   }
-  return $self->{weight};
+  return $self->_weight();
 }
 
 ## OVERRIDES FOR UNSUPPORTED FUNCTIONS
 
 sub mindex{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub maxdex{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 1;
@@ -154,11 +160,16 @@ sub new {
 ## The choice is motivated by heavy intended use for Empirical Distribution Function
 ## A lot of work is done at insertion for faster computation on search
 ## THE ACTUAL DATA INSERTION IS DONE AT FUNCTION _addweight
- ## The data structure loses information. Like a hash keys appear only once.
+## The data structure loses information. Like a hash keys appear only once.
 ## The value of a key is its sum of weight for that key, and the cumulative weight
 sub add_data {
   my $self = shift;
   my $key;
+
+  if ( (not ref $_[0] eq 'ARRAY') || (exists $_[1] and (not (ref $_[1] eq 'ARRAY') || @{$_[0]} != @{$_[1]} ) ) ) {
+    cluck "WARNING: Expected input are two references to two arrays of equal length; first data, then positive weights. Second array is optional.\n";
+    return undef;
+  }
 
   my ($datum,$weight) = @_;
   my $filterdatum = [];
@@ -166,6 +177,9 @@ sub add_data {
   my $weighterror;
   my $newweight;
   for (0..$#$datum) {
+    if (not defined $$weight[$_]) {
+      $$weight[$_] = 1;
+    }
     if ($$weight[$_] > 0) {
       push @$filterdatum,$$datum[$_];
       push @$filterweight,$$weight[$_];
@@ -179,7 +193,7 @@ sub add_data {
       $weighterror = 1;
     }
   }
-  cluck "One or more data with nonpositive weights were skipped.\n" if ($weighterror);
+  cluck "WARNING: One or more data with nonpositive weights were skipped.\n" if ($weighterror);
   $self->SUPER::add_data($filterdatum,$filterweight);  ##Perform base statistics on the data
   ##Clear the did_cdf flag
   $self->{did_cdf} = 0;
@@ -204,7 +218,7 @@ sub count {
     return $self->{count};
   }
   else { 
-    cluck "Only 1 or fewer arguments expected.";
+    cluck "WARNING: Only 1 or fewer arguments expected.";
   }
   return 1;
 }
@@ -219,7 +233,7 @@ sub weight {
     return $self->{weight};
   }
   else { 
-    cluck "Only 1 or fewer arguments expected.";
+    cluck "WARNING: Only 1 or fewer arguments expected.";
   }
   return 1;
 }
@@ -239,7 +253,7 @@ sub _addweight {
     $self->{data}->insert($_[0],$values);
   }
   else {
-    cluck "Only two arguments (key, addend) expected.";
+    cluck "WARNING: Only two arguments (key, addend) expected.";
   }
   return $newweight;
 }
@@ -275,13 +289,13 @@ sub quantile {
   $self->_do_cdf() unless $self->{did_cdf};
   if (@_ == 1) {  ##Inquire
     my $proportion = shift;
-    cluck "expects an argument between 0 and 1 inclusive." if ($proportion < 0 or $proportion > 1);
+    cluck "WARNING: Expects an argument between 0 and 1 inclusive." if ($proportion < 0 or $proportion > 1);
     my @keys = $self->{quantile}->range_keys($proportion, undef);
     my $key = $keys[0]; ## GET THE SMALLEST QUANTILE g.e. $proportion
     return $self->{quantile}->get_val($keys[0]);
   }
   else { 
-    cluck "exactly 1 argument expected.";
+    cluck "WARNING: Exactly 1 argument expected.";
     return undef;
   }
 }
@@ -289,29 +303,31 @@ sub quantile {
 sub percentile {
   my $self = shift;
   $self->_do_cdf() unless $self->{did_cdf};
-  if (@_ == 1) {  ##Inquire
-    my $percent = shift;
-    cluck "expects an argument between 0 and 100 inclusive." if ($percent < 0 or $percent > 100);
-    if ($percent < $self->{percentile}->minimum()) {
-      return $self->{data}->minimum();
-    }
-    elsif ($percent > $self->{percentile}->maximum()) {
-      return $self->{data}->maximum();
-    }
-    else {
-      my @gekeys =  $self->{percentile}->range_keys($percent, undef);
-      my $gekey = $gekeys[0];
+  if (@_ != 1) {
+    cluck "WARNING: Exactly 1 argument expected.";
+  }
+  my $percent = shift;
+  if ($percent < 0 or $percent > 100) {
+    cluck "WARNING: Expects an argument between 0 and 100 inclusive.";
+  }
+  my $percentile;
+  if ($percent < $self->{percentile}->minimum()) {
+    $percentile = $self->{data}->minimum();
+  } elsif ($percent > $self->{percentile}->maximum()) {
+    $percentile = $self->{data}->maximum();
+  } else {
+    my @lekeys =  $self->{percentile}->range_keys(undef,$percent);
+    my $lekey = $lekeys[-1];
+    my @gekeys =  $self->{percentile}->range_keys($percent, undef);
+    my $gekey = $gekeys[0];
+    my $leval = $self->{percentile}->get_val($lekey);
+    $percentile = $leval;
+    if ($gekey != $lekey) {
       my $geval = $self->{percentile}->get_val($gekey);
-      my @lekeys =  $self->{percentile}->range_keys(undef,$percent);
-      my $lekey = $lekeys[-1];
-      my $leval = $self->{percentile}->get_val($lekey);
-      return ($leval + (($percent - $lekey) / ($gekey - $lekey) * ($geval - $leval)));
+      $percentile += ($percent - $lekey) / ($gekey - $lekey) * ($geval - $leval);
     }
   }
-  else { 
-    cluck "exactly 1 argument expected.";
-  }
-  return 1;
+  return $percentile;
 }
 
 
@@ -339,7 +355,7 @@ sub cdf {
     return ${ $self->{data}->get_val($key) }{'cdf'};
   }
   else { 
-    cluck "exactly 1 argument expected.";
+    cluck "WARNING: Exactly 1 argument expected.";
     return undef;
   }
 }
@@ -355,7 +371,7 @@ sub survival {
     return 1 - (${ $self->{data}->get_val($key) }{'cdf'});
   }
   else { 
-    cluck "only 1 argument expected.";
+    cluck "WARNING: Only 1 argument expected.";
     return undef;
   }
 }
@@ -371,7 +387,7 @@ sub rtp {
     return ${ $self->{data}->get_val($key) }{'rt_tail_prob'};
   }
   else { 
-    cluck "only 1 argument expected.";
+    cluck "WARNING: Only 1 argument expected.";
     return undef;
   }
 }
@@ -407,31 +423,31 @@ sub print {
 ## OVERRIDES FOR UNSUPPORTED FUNCTIONS
 
 sub sort_data{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub presorted{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub harmonic_mean{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub geometric_mean{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub trimmed_mean{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub frequency_distribution{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 sub least_squares_fit{
-  confess "Statistics::Descriptive::Weighted does not support this function.";
+  confess "ERROR: Statistics::Descriptive::Weighted does not support this function.";
 }
 
 
@@ -469,11 +485,11 @@ statistical functions for weighted variates.
   $med   = $stat->median();                  ## weighted sample median
   $mode  = $stat->mode();                    ## returns 4, value with the most weight
   $ptl   = $stat->quantile(.01);             ## returns 3, smallest value with cdf >= 1st %ile 
-  $ptl   = $stat->percentile(1);             ## returns about 2.09, obtained by interpolation
+  $ptl   = $stat->percentile(1);             ## returns about 2.06, obtained by interpolation
   $cdf   = $stat->cdf(3);                    ## returns ECDF of 3   (about 17.4%)
   $cdf   = $stat->cdf(3.5);                  ## returns ECDF of 3.5 (about 17.4%, same as ECDF of 3)
-  $sf    = $stat->survival(3);               ## returns complement of ECDF(3)   (about 82.6%)     
-  $p-val = $stat->rtp(4);                    ## returns right tail probability of 4 (100 / 121.1) 
+  $sf    = $stat->survival(3);               ## returns complement of ECDF(3)   (about 82.6%)
+  $pval  = $stat->rtp(4);                    ## returns right tail probability of 4 (100 / 121.1, about 82.6%)
 
   $min  = $stat->min();                      ## returns 1, the minimum
   $max  = $stat->max();                      ## returns 4, the maximum
@@ -581,7 +597,7 @@ The implementation uses Tree::Treap v. 0.02 written by Andrew Johnson.
 
 =over 
 
-=item $stat = Statistics::Descriptive::Sparse->new();
+=item $stat = Statistics::Descriptive::Weighted::Sparse->new();
 
 Create a new sparse statistics object.
 
@@ -590,12 +606,15 @@ Create a new sparse statistics object.
 Adds data to the statistics object. The cached statistical values are
 updated automatically.
 
-This function expects two array references: the first points to
+This function expects one or two array references: the first points to
 variates and the second to their corresponding weights. The referenced
 arrays must be of equal lengths. The weights are expected to all be
 positive. If any weights are not positive, the module will carp
 (complain to standard error) and the corresponding variates will be
-skipped over.
+skipped over. 
+
+If the weights array is omitted, all weights for the values added are
+assumed to be 1.
 
 Variates may be added in multiple instances to Statistics objects, and
 their summaries are calculated "on-line," that is updated.
@@ -681,7 +700,7 @@ the current result so that it doesn't have to be recalculated.
 
 =over 
 
-=item $stat = Statistics::Descriptive::Full->new();
+=item $stat = Statistics::Descriptive::Weighted::Full->new();
 
 Create a new statistics object that inherits from
 Statistics::Descriptive::Sparse so that it contains all the methods
@@ -689,8 +708,8 @@ described above.
 
 =item $stat->add_data([1,2,4,5],[2,2,2,5]);
 
-Adds weighted data to the statistics object.  All of the sparse
-statistical values are updated and cached.  Cached values from Full
+Adds weighted data to the statistics object. All of the sparse
+statistical values are updated and cached. Cached values from Full
 methods are deleted since they are no longer valid.
 
 I<Note:  Calling add_data with an empty array will delete all of your
@@ -985,6 +1004,13 @@ David H. Ardell
 
 dhard@cpan.org (or just ask Google).
 
+=head1 THANKS
+
+Florent Angly
+
+who contributed bug fixes, added features and tests, and improved
+installation statistics (Oct 2009).
+
 =head1 REFERENCES
 
 =over
@@ -1022,8 +1048,12 @@ Tree::Treap Copyright 2002-2005 Andrew Johnson. L<http://stuff.siaris.net>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 David H. Ardell. This program is free software; you can
-redistribute it and/or modify it under the same terms as Perl itself.
+Copyright (c) 2008,2009 David H. Ardell. 
+
+Copyright (c) 2009 Florent Angly.
+
+This program is free software; you may redistribute it and/or modify it
+under the same terms as Perl itself.
 
 Portions of this code are from Statistics::Descriptive which is under
 the following copyrights.
@@ -1050,6 +1080,10 @@ at your option, any later version of Perl 5 you may have available.
 =head1 REVISION HISTORY
 
 =over
+
+=item v.0.5
+
+October 2009. Fixed installation/test errors. Weights array made optional.
 
 =item v.0.4
 

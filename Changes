@@ -1,5 +1,16 @@
 Revision history for Perl extension Statistics::Descriptive::Weighted.
 
+0.50 Oct 2009
+
+Contributed changes from Florent Angly:
+
+1) Fixed some installation/test errors arising from changes to base class
+2) Made second argument to add data, specifying weights, optional. If not
+specified, weights of arguments set to 1
+3) Revised some error messages
+
+other minor changes
+
 0.40 Feb 2009 
 
      - Redefinition of variance() and standard_deviation() (to
