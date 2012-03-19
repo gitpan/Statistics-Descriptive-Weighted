@@ -1,5 +1,5 @@
 package Statistics::Descriptive::Weighted;
-$VERSION = '0.5';
+$VERSION = '0.6';
 use Statistics::Descriptive;
 use Data::Dumper;
 
@@ -14,11 +14,12 @@ use Carp qw(cluck confess);
 ##Define a new field to be used as method, to
 ##augment the ones inherited
 %fields = (
+           mean                      => 0,
 	   weight                    => 0,
 	   sum_squares               => 0,
 	   weight_homozyg            => 0,
 	   biased_variance           => 0,
-	   biased_standard_deviation => 0,
+	   biased_standard_deviation => 0
   );
 
 __PACKAGE__->_make_accessors( [ grep { $_ ne "weight" } keys(%fields) ] );
