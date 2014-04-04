@@ -1,5 +1,5 @@
 package Statistics::Descriptive::Weighted;
-$VERSION = '0.6';
+$VERSION = '0.7';
 use Statistics::Descriptive;
 use Data::Dumper;
 
@@ -88,7 +88,8 @@ sub add_data {
     }
   }
   cluck "WARNING: One or more data with nonpositive weights were skipped.\n" if ($weighterror);
-  $self->{sample_range} = $self->{max} - $self->{min};
+    $self->{sample_range} = $self->{max} - $self->{min};
+
   if ($self->{count} > 1) {
     $self->{variance}     = ($self->{sum_squares} / ((1 - $self->{weight_homozyg}) * $self->{weight}));
     $self->{standard_deviation}  = sqrt( $self->{variance});
@@ -398,7 +399,7 @@ sub get_data {
   $self->_do_cdf() unless $self->{did_cdf};
   my ($uniqkeys, $sumweights, $keys, $weights, $counts, $cdfs, $rtps, $percentiles, $order) = ([],[],[],[],[],[],[],[],[]);
   my $key = $self->{'data'}->minimum();
-  while ($key){
+  while (defined $key){
     my $value = $self->{data}->get_val($key);
     push @$uniqkeys, $key;
     push @$sumweights, $$value{'weight'};

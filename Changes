@@ -1,11 +1,20 @@
 Revision history for Perl extension Statistics::Descriptive::Weighted.
 
+0.70 Mar 26, 2012
+
+Handle empty arguments to add_data.
+Fixed Bug ID 93761 "Error in get_data() when min value is 0"
+
 0.60 Mar 18, 2012
 
 Fixed an initialization error introduced by implementation changes
 to base-class Statistics::Descriptive. 
 
-Attribute "mean" seems no longer to be initialized with new().
+Attribute "mean" seemed no longer to be initialized with base class new().
+
+This caused an initialization error at the first use of add_data().
+
+The mean attribute is now initialized in Statistics::Descriptive::Weighted.
 
 0.50 Oct 2009
 

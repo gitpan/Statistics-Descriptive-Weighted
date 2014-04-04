@@ -1,4 +1,4 @@
-use Test::Simple tests => 123;
+use Test::Simple tests => 125;
 use Statistics::Descriptive::Weighted;
 use Statistics::Descriptive;
 
@@ -174,3 +174,5 @@ ok( $full->percentile(50), "Full dataset 7 - causes illegal division by zero in 
 ## confess on disqualified inherited functions
 
 
+ok( $full = Statistics::Descriptive::Weighted::Full->new() );
+ok( $full->add_data([]), "" );
